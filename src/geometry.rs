@@ -9,13 +9,16 @@ pub struct Coord<T: Metric + ?Sized> {
     pub _metric: PhantomData<T>,
 }
 
-impl<T: Metric> Clone for Coord<T> {
+impl<T: Metric + ?Sized> Clone for Coord<T> {
     fn clone(&self) -> Self {
-        Self { components: self.components.clone(), _metric: self._metric.clone() }
+        Self {
+            components: self.components.clone(),
+            _metric: PhantomData,
+        }
     }
 }
 
-impl<T: Metric> Copy for Coord<T> {}
+impl<T: Metric + ?Sized> Copy for Coord<T> {}
 
 /// Vector in the tangent space of a manifold
 #[derive(PartialEq)]
@@ -24,13 +27,32 @@ pub struct ManifoldVector<T: Metric + ?Sized> {
     pub components: [f64; 4],
 }
 
-impl<T: Metric> Clone for ManifoldVector<T> {
+impl<T: Metric + ?Sized> Clone for ManifoldVector<T> {
     fn clone(&self) -> Self {
-        Self { root: self.root.clone(), components: self.components.clone() }
+        Self {
+            root: self.root.clone(),
+            components: self.components.clone(),
+        }
     }
 }
 
-impl<T: Metric> Copy for ManifoldVector<T> {}
+impl<T: Metric + ?Sized> Copy for ManifoldVector<T> {}
 
 /// Vector describing relative distances in flat 3-dimensional euclidean space
 pub struct SpatialVec(pub [f64; 3]);
+
+pub struct BoundingBox<T: Metric + ?Sized> {
+    pub bbox: [[f64; 2]; 4],
+    pub _metric: PhantomData<T>,
+}
+
+impl<T: Metric + ?Sized> Clone for BoundingBox<T> {
+    fn clone(&self) -> Self {
+        Self {
+            bbox: self.bbox.clone(),
+            _metric: PhantomData,
+        }
+    }
+}
+
+impl<T: Metric + ?Sized> Copy for BoundingBox<T> {}

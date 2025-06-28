@@ -30,8 +30,8 @@ impl Camera for BasicCamera {
     }
 
     fn relative_dir(&self, pixel: (usize, usize)) -> SpatialVec {
-        let x: f64 = (pixel.0 as f64)/(self.pix_width as f64) - 0.5;
-        let y: f64 = (pixel.1 as f64)/(self.pix_height as f64) - 0.5;
+        let x: f64 = (pixel.0 as f64) / (self.pix_width as f64) - 0.5;
+        let y: f64 = (pixel.1 as f64) / (self.pix_height as f64) - 0.5;
 
         SpatialVec([x * self.plane_width, y * self.plane_height, 1.0])
     }
