@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    geometry::{BoundingBox, Coord, ManifoldVector},
+    geometry::{BoundingBox, Coord, FourVector, ManifoldFrame, ManifoldVector},
     metric::Metric,
     util::sqr,
 };
@@ -13,7 +13,7 @@ pub trait RayIntersector<T: Metric> {
 }
 
 pub struct SphereCollider<T: Metric> {
-    pub center: ManifoldVector<T>,
+    pub center: ManifoldFrame<T>,
     pub radius: f64,
     pub time_thickness: f64,
 }
@@ -23,12 +23,12 @@ impl<T: Metric> RayIntersector<T> for SphereCollider<T> {
         let local_ray = T::into_local(self.center, ray);
 
         let ab = (0..3)
-            .map(|i| local_ray.root.components[i + 1] * local_ray.components[i + 1])
+            .map(|i| local_ray.root.components.0[i + 1] * local_ray.components.0[i + 1])
             .sum::<f64>();
         let na = (0..3)
-            .map(|i| sqr(local_ray.root.components[i + 1]))
+            .map(|i| sqr(local_ray.root.components.0[i + 1]))
             .sum::<f64>();
-        let nb = (0..3).map(|i| sqr(local_ray.components[i])).sum::<f64>();
+        let nb = (0..3).map(|i| sqr(local_ray.components.0[i])).sum::<f64>();
         let r2 = sqr(self.radius);
 
         let d = sqr(ab) - na * nb + nb * r2;
@@ -42,8 +42,8 @@ impl<T: Metric> RayIntersector<T> for SphereCollider<T> {
         let t1 = (-ab + rootd) / sqr(nb);
         let t2 = (-ab - rootd) / sqr(nb);
 
-        let tau1 = local_ray.root.components[0] + t1 * local_ray.components[0];
-        let tau2 = local_ray.root.components[0] + t2 * local_ray.components[0];
+        let tau1 = local_ray.root.components.0[0] + t1 * local_ray.components.0[0];
+        let tau2 = local_ray.root.components.0[0] + t2 * local_ray.components.0[0];
 
         tau1.abs() <= self.time_thickness || tau2.abs() <= self.time_thickness
     }
@@ -59,20 +59,20 @@ impl<T: Metric> RayIntersector<T> for SphereCollider<T> {
                             self.center,
                             ManifoldVector {
                                 root: Coord {
-                                    components: [
+                                    components: FourVector([
                                         bbox.bbox[0][i0],
                                         bbox.bbox[1][i1],
                                         bbox.bbox[2][i2],
                                         bbox.bbox[3][i3],
-                                    ],
+                                    ]),
                                     _metric: PhantomData,
                                 },
-                                components: [0.0; 4],
+                                components: FourVector::default(),
                             },
                         );
                         for i in 0..4 {
-                            upper[i] = upper[i].max(local.root.components[i]);
-                            lower[i] = lower[i].min(local.root.components[i]);
+                            upper[i] = upper[i].max(local.root.components.0[i]);
+                            lower[i] = lower[i].min(local.root.components.0[i]);
                         }
                     }
                 }

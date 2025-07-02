@@ -1,95 +1,97 @@
 use std::{array, marker::PhantomData};
 
 use crate::{
-    geometry::{Coord, ManifoldVector},
-    util::sqr,
+    geometry::{Coord, FourVector, ManifoldFrame, ManifoldVector},
 };
 
 pub trait Metric {
     fn step_geodesic(start: ManifoldVector<Self>, step: f64) -> ManifoldVector<Self>;
 
+    fn norm(vector: ManifoldVector<Self>) -> f64;
+
+    fn inner(root: Coord<Self>, a: FourVector, b: FourVector) -> f64;
+
     fn into_local(
-        root: ManifoldVector<Self>,
+        root: ManifoldFrame<Self>,
         secondary: ManifoldVector<Self>,
-    ) -> ManifoldVector<CarthesianMinkowski>;
+    ) -> ManifoldVector<CarthesianMinkowski> {
+        let posdelta = secondary.root.components - root.root.components;
+
+        ManifoldVector {
+            root: Coord {
+                components: FourVector(array::from_fn(|i| {
+                    Self::inner(root.root, root.axis[i], posdelta)
+                        / Self::norm(ManifoldVector {
+                            root: root.root,
+                            components: root.axis[i],
+                        })
+                })),
+                _metric: PhantomData,
+            },
+            components: FourVector(array::from_fn(|i| {
+                Self::inner(root.root, root.axis[i], secondary.components)
+                    / Self::norm(ManifoldVector {
+                        root: root.root,
+                        components: root.axis[i],
+                    })
+            })),
+        }
+    }
+
+    fn from_local(
+        frame: ManifoldFrame<Self>,
+        vector: ManifoldVector<CarthesianMinkowski>,
+    ) -> ManifoldVector<Self>;
 }
 
 pub struct CarthesianMinkowski;
+
+impl CarthesianMinkowski {
+    const METRIC: [f64; 4] = [-1.0, 1.0, 1.0, 1.0];
+}
 
 impl Metric for CarthesianMinkowski {
     fn step_geodesic(start: ManifoldVector<Self>, step: f64) -> ManifoldVector<Self> {
         ManifoldVector {
             root: Coord {
-                components: array::from_fn(|i| {
-                    start.root.components[i] + start.components[i] * step
-                }),
+                components: start.root.components + step * start.components,
                 _metric: PhantomData,
             },
             components: start.components,
         }
     }
 
-    fn into_local(
-        root: ManifoldVector<Self>,
-        secondary: ManifoldVector<Self>,
-    ) -> ManifoldVector<CarthesianMinkowski> {
-        assert!(
-            -sqr(root.components[0])
-                + sqr(root.components[1])
-                + sqr(root.components[2])
-                + sqr(root.components[3])
-                < 0.0
-        );
-        let beta: [_; 3] = array::from_fn(|i| root.components[1 + i] / root.components[0]);
-        let gamma = 1. / ((1. - beta.iter().map(|v| sqr(*v)).sum::<f64>()).sqrt());
-        let gamma2 = sqr(gamma) / (1. + gamma);
+    fn norm(vector: ManifoldVector<Self>) -> f64 {
+        (0..4)
+            .into_iter()
+            .map(|i| vector.components.0[i].powi(2) * Self::METRIC[i])
+            .sum()
+    }
 
+    fn inner(_root: Coord<Self>, a: FourVector, b: FourVector) -> f64 {
+        (0..4)
+            .into_iter()
+            .map(|i| a.0[i] * b.0[i] * Self::METRIC[i])
+            .sum()
+    }
+
+    fn from_local(
+        frame: ManifoldFrame<Self>,
+        vector: ManifoldVector<CarthesianMinkowski>,
+    ) -> ManifoldVector<Self> {
         ManifoldVector {
             root: Coord {
-                components: [
-                    gamma * secondary.root.components[0]
-                        - (0..3)
-                            .map(|i| gamma * beta[i] * secondary.root.components[i + 1])
-                            .sum::<f64>(),
-                    -gamma * beta[0] * secondary.root.components[0]
-                        + (0..3)
-                            .map(|i| gamma2 * beta[i] * beta[0] * secondary.root.components[i + 1])
-                            .sum::<f64>()
-                        + secondary.root.components[0],
-                    -gamma * beta[1] * secondary.root.components[0]
-                        + (0..3)
-                            .map(|i| gamma2 * beta[i] * beta[1] * secondary.root.components[i + 1])
-                            .sum::<f64>()
-                        + secondary.root.components[1],
-                    -gamma * beta[2] * secondary.root.components[0]
-                        + (0..3)
-                            .map(|i| gamma2 * beta[i] * beta[2] * secondary.root.components[i + 1])
-                            .sum::<f64>()
-                        + secondary.root.components[2],
-                ],
+                components: frame.root.components
+                    + (0..4)
+                        .into_iter()
+                        .map(|i| vector.root.components.0[i] * frame.axis[i])
+                        .sum(),
                 _metric: PhantomData,
             },
-            components: [
-                gamma * secondary.components[0]
-                    - (0..3)
-                        .map(|i| gamma * beta[i] * secondary.components[i + 1])
-                        .sum::<f64>(),
-                -gamma * beta[0] * secondary.components[0]
-                    + (0..3)
-                        .map(|i| gamma2 * beta[i] * beta[0] * secondary.components[i + 1])
-                        .sum::<f64>()
-                    + secondary.components[0],
-                -gamma * beta[1] * secondary.components[0]
-                    + (0..3)
-                        .map(|i| gamma2 * beta[i] * beta[1] * secondary.components[i + 1])
-                        .sum::<f64>()
-                    + secondary.components[1],
-                -gamma * beta[2] * secondary.components[0]
-                    + (0..3)
-                        .map(|i| gamma2 * beta[i] * beta[2] * secondary.components[i + 1])
-                        .sum::<f64>()
-                    + secondary.components[2],
-            ],
+            components: (0..4)
+                .into_iter()
+                .map(|i| vector.components.0[i] * frame.axis[i])
+                .sum(),
         }
     }
 }
