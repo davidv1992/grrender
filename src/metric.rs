@@ -1,10 +1,8 @@
 use std::{array, marker::PhantomData};
 
-use crate::{
-    geometry::{Coord, FourVector, ManifoldFrame, ManifoldVector},
-};
+use crate::geometry::{Coord, FourVector, ManifoldFrame, ManifoldVector, SpatialVec};
 
-pub trait Metric {
+pub trait Metric: std::fmt::Debug {
     fn step_geodesic(start: ManifoldVector<Self>, step: f64) -> ManifoldVector<Self>;
 
     fn norm(vector: ManifoldVector<Self>) -> f64;
@@ -25,6 +23,9 @@ pub trait Metric {
                             root: root.root,
                             components: root.axis[i],
                         })
+                        .abs()
+                        .sqrt()
+                        * (if i == 0 { -1. } else { 1. })
                 })),
                 _metric: PhantomData,
             },
@@ -34,6 +35,9 @@ pub trait Metric {
                         root: root.root,
                         components: root.axis[i],
                     })
+                    .abs()
+                    .sqrt()
+                    * (if i == 0 { -1. } else { 1. })
             })),
         }
     }
@@ -44,10 +48,39 @@ pub trait Metric {
     ) -> ManifoldVector<Self>;
 }
 
+#[derive(Debug)]
 pub struct CarthesianMinkowski;
 
 impl CarthesianMinkowski {
     const METRIC: [f64; 4] = [-1.0, 1.0, 1.0, 1.0];
+
+    pub fn lightray(spatial: SpatialVec) -> ManifoldVector<Self> {
+        let raw = FourVector([
+            -spatial.0.into_iter().map(|v| v.powi(2)).sum::<f64>(),
+            spatial.0[0],
+            spatial.0[1],
+            spatial.0[2],
+        ]);
+
+        ManifoldVector {
+            root: Coord {
+                components: Default::default(),
+                _metric: PhantomData,
+            },
+            components: (1.0 / spatial.0.iter().map(|v| v.powi(2)).sum::<f64>().sqrt()) * raw,
+        }
+    }
+    pub fn instantray(spatial: SpatialVec) -> ManifoldVector<Self> {
+        let raw = FourVector([0.0, spatial.0[0], spatial.0[1], spatial.0[2]]);
+
+        ManifoldVector {
+            root: Coord {
+                components: Default::default(),
+                _metric: PhantomData,
+            },
+            components: (1.0 / spatial.0.iter().map(|v| v.powi(2)).sum::<f64>().sqrt()) * raw,
+        }
+    }
 }
 
 impl Metric for CarthesianMinkowski {
@@ -65,7 +98,7 @@ impl Metric for CarthesianMinkowski {
         (0..4)
             .into_iter()
             .map(|i| vector.components.0[i].powi(2) * Self::METRIC[i])
-            .sum()
+            .sum::<f64>()
     }
 
     fn inner(_root: Coord<Self>, a: FourVector, b: FourVector) -> f64 {

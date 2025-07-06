@@ -16,8 +16,8 @@ pub struct BasicCamera {
 impl BasicCamera {
     pub fn new(width: usize, height: usize, scale: f64) -> Self {
         BasicCamera {
-            pix_width: width,
-            pix_height: height,
+            pix_width: width-1,
+            pix_height: height-1,
             plane_width: scale,
             plane_height: scale * (height as f64) / (width as f64),
         }
@@ -26,7 +26,7 @@ impl BasicCamera {
 
 impl Camera for BasicCamera {
     fn screen_size(&self) -> (usize, usize) {
-        (self.pix_width, self.pix_height)
+        (self.pix_width+1, self.pix_height+1)
     }
 
     fn relative_dir(&self, pixel: (usize, usize)) -> SpatialVec {

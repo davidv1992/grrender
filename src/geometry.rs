@@ -53,7 +53,7 @@ impl Sum<FourVector> for FourVector {
 }
 
 /// Coordinate on a manifold
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub struct Coord<T: Metric + ?Sized> {
     pub components: FourVector,
     pub _metric: PhantomData<T>,
@@ -71,7 +71,7 @@ impl<T: Metric + ?Sized> Clone for Coord<T> {
 impl<T: Metric + ?Sized> Copy for Coord<T> {}
 
 /// Vector in the tangent space of a manifold
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub struct ManifoldVector<T: Metric + ?Sized> {
     pub root: Coord<T>,
     pub components: FourVector,
@@ -88,7 +88,7 @@ impl<T: Metric + ?Sized> Clone for ManifoldVector<T> {
 
 impl<T: Metric + ?Sized> Copy for ManifoldVector<T> {}
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub struct ManifoldFrame<T: Metric + ?Sized> {
     pub root: Coord<T>,
     pub axis: [FourVector; 4],
@@ -116,13 +116,13 @@ impl<T: Metric + ?Sized> ManifoldFrame<T> {
     }
 
     pub fn normalize(self) -> Self {
-        let t = (1.0 / T::norm(ManifoldVector { root: self.root, components: self.axis[0] }).abs()) * self.axis[0];
+        let t = (1.0 / T::norm(ManifoldVector { root: self.root, components: self.axis[0] }).abs().sqrt()) * self.axis[0];
         let x = self.axis[1] + T::inner(self.root, t, self.axis[1]) * t;
-        let x = (1.0 / T::norm(ManifoldVector { root: self.root, components: x})) * x;
+        let x = (1.0 / T::norm(ManifoldVector { root: self.root, components: x}).abs().sqrt()) * x;
         let y = self.axis[2] + T::inner(self.root, t, self.axis[2]) * t - T::inner(self.root, x, self.axis[2]) * x;
-        let y = (1.0 / T::norm(ManifoldVector { root: self.root, components: y })) * y;
+        let y = (1.0 / T::norm(ManifoldVector { root: self.root, components: y }).abs().sqrt()) * y;
         let z = self.axis[3] + T::inner(self.root, t, self.axis[3]) * t - T::inner(self.root, x, self.axis[3]) * x - T::inner(self.root, y, self.axis[3]) * y;
-        let z = (1.0 / T::norm(ManifoldVector { root: self.root, components: z })) * z;
+        let z = (1.0 / T::norm(ManifoldVector { root: self.root, components: z }).abs().sqrt()) * z;
         ManifoldFrame { root: self.root, axis: [t, x, y, z] }
     }
 }
@@ -139,8 +139,10 @@ impl<T: Metric + ?Sized> Clone for ManifoldFrame<T> {
 impl<T: Metric + ?Sized> Copy for ManifoldFrame<T> {}
 
 /// Vector describing relative distances in flat 3-dimensional euclidean space
+#[derive(PartialEq, Debug)]
 pub struct SpatialVec(pub [f64; 3]);
 
+#[derive(Debug, PartialEq)]
 pub struct BoundingBox<T: Metric + ?Sized> {
     pub bbox: [[f64; 2]; 4],
     pub _metric: PhantomData<T>,

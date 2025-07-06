@@ -6,20 +6,23 @@ use crate::{
     util::sqr,
 };
 
-pub trait RayIntersector<T: Metric> {
-    fn intersects(&self, ray: ManifoldVector<T>) -> bool;
+pub trait RayIntersector<T: Metric + ?Sized> {
+    fn intersects(&self, ray: ManifoldVector<T>, stepsize: f64) -> bool;
 
     fn in_bounding_box(&self, bbox: BoundingBox<T>) -> bool;
 }
 
-pub struct SphereCollider<T: Metric> {
+pub struct SphereCollider<T: Metric + ?Sized> {
     pub center: ManifoldFrame<T>,
     pub radius: f64,
     pub time_thickness: f64,
 }
 
-impl<T: Metric> RayIntersector<T> for SphereCollider<T> {
-    fn intersects(&self, ray: ManifoldVector<T>) -> bool {
+impl<T: Metric + ?Sized> RayIntersector<T> for SphereCollider<T> {
+    fn intersects(&self, ray: ManifoldVector<T>, stepsize: f64) -> bool {
+        let mut lower: f64 = 0.0;
+        let mut upper: f64 = stepsize;
+
         let local_ray = T::into_local(self.center, ray);
 
         let ab = (0..3)
@@ -28,7 +31,7 @@ impl<T: Metric> RayIntersector<T> for SphereCollider<T> {
         let na = (0..3)
             .map(|i| sqr(local_ray.root.components.0[i + 1]))
             .sum::<f64>();
-        let nb = (0..3).map(|i| sqr(local_ray.components.0[i])).sum::<f64>();
+        let nb = (0..3).map(|i| sqr(local_ray.components.0[i+1])).sum::<f64>();
         let r2 = sqr(self.radius);
 
         let d = sqr(ab) - na * nb + nb * r2;
@@ -39,13 +42,16 @@ impl<T: Metric> RayIntersector<T> for SphereCollider<T> {
 
         let rootd = d.sqrt();
 
-        let t1 = (-ab + rootd) / sqr(nb);
-        let t2 = (-ab - rootd) / sqr(nb);
+        lower = lower.max((-ab - rootd) / sqr(nb));
+        upper = upper.min((-ab + rootd) / sqr(nb));
 
-        let tau1 = local_ray.root.components.0[0] + t1 * local_ray.components.0[0];
-        let tau2 = local_ray.root.components.0[0] + t2 * local_ray.components.0[0];
+        let t1 = (local_ray.root.components.0[0] - self.time_thickness)/local_ray.components.0[0];
+        let t2 = (local_ray.root.components.0[0] + self.time_thickness)/local_ray.components.0[0];
 
-        tau1.abs() <= self.time_thickness || tau2.abs() <= self.time_thickness
+        lower = lower.max(t1.min(t2));
+        upper = upper.min(t1.max(t2));
+
+        lower <= upper
     }
 
     fn in_bounding_box(&self, bbox: BoundingBox<T>) -> bool {
