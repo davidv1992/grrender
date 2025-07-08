@@ -1,4 +1,9 @@
-use std::{array, iter::Sum, marker::PhantomData, ops::{Add, AddAssign, Mul, Sub, SubAssign}};
+use std::{
+    array,
+    iter::Sum,
+    marker::PhantomData,
+    ops::{Add, AddAssign, Mul, Sub, SubAssign},
+};
 
 use crate::metric::Metric;
 
@@ -97,16 +102,28 @@ pub struct ManifoldFrame<T: Metric + ?Sized> {
 impl<T: Metric + ?Sized> ManifoldFrame<T> {
     pub fn normal(self) -> bool {
         const EPS: f64 = 1e-10;
-        if (T::norm(ManifoldVector { root: self.root, components: self.axis[0]}) + 1.0).abs() > EPS {
+        if (T::norm(ManifoldVector {
+            root: self.root,
+            components: self.axis[0],
+        }) + 1.0)
+            .abs()
+            > EPS
+        {
             return false;
         }
         for i in 1..4 {
-            if (T::norm(ManifoldVector { root: self.root, components: self.axis[i] }) - 1.0).abs() > EPS {
+            if (T::norm(ManifoldVector {
+                root: self.root,
+                components: self.axis[i],
+            }) - 1.0)
+                .abs()
+                > EPS
+            {
                 return false;
             }
         }
         for i in 0..4 {
-            for j in i+1..4 {
+            for j in i + 1..4 {
                 if T::inner(self.root, self.axis[i], self.axis[j]).abs() > EPS {
                     return false;
                 }
@@ -116,14 +133,48 @@ impl<T: Metric + ?Sized> ManifoldFrame<T> {
     }
 
     pub fn normalize(self) -> Self {
-        let t = (1.0 / T::norm(ManifoldVector { root: self.root, components: self.axis[0] }).abs().sqrt()) * self.axis[0];
+        let t = (1.0
+            / T::norm(ManifoldVector {
+                root: self.root,
+                components: self.axis[0],
+            })
+            .abs()
+            .sqrt())
+            * self.axis[0];
         let x = self.axis[1] + T::inner(self.root, t, self.axis[1]) * t;
-        let x = (1.0 / T::norm(ManifoldVector { root: self.root, components: x}).abs().sqrt()) * x;
-        let y = self.axis[2] + T::inner(self.root, t, self.axis[2]) * t - T::inner(self.root, x, self.axis[2]) * x;
-        let y = (1.0 / T::norm(ManifoldVector { root: self.root, components: y }).abs().sqrt()) * y;
-        let z = self.axis[3] + T::inner(self.root, t, self.axis[3]) * t - T::inner(self.root, x, self.axis[3]) * x - T::inner(self.root, y, self.axis[3]) * y;
-        let z = (1.0 / T::norm(ManifoldVector { root: self.root, components: z }).abs().sqrt()) * z;
-        ManifoldFrame { root: self.root, axis: [t, x, y, z] }
+        let x = (1.0
+            / T::norm(ManifoldVector {
+                root: self.root,
+                components: x,
+            })
+            .abs()
+            .sqrt())
+            * x;
+        let y = self.axis[2] + T::inner(self.root, t, self.axis[2]) * t
+            - T::inner(self.root, x, self.axis[2]) * x;
+        let y = (1.0
+            / T::norm(ManifoldVector {
+                root: self.root,
+                components: y,
+            })
+            .abs()
+            .sqrt())
+            * y;
+        let z = self.axis[3] + T::inner(self.root, t, self.axis[3]) * t
+            - T::inner(self.root, x, self.axis[3]) * x
+            - T::inner(self.root, y, self.axis[3]) * y;
+        let z = (1.0
+            / T::norm(ManifoldVector {
+                root: self.root,
+                components: z,
+            })
+            .abs()
+            .sqrt())
+            * z;
+        ManifoldFrame {
+            root: self.root,
+            axis: [t, x, y, z],
+        }
     }
 }
 
@@ -161,6 +212,8 @@ impl<T: Metric + ?Sized> Copy for BoundingBox<T> {}
 
 impl<T: Metric + ?Sized> BoundingBox<T> {
     pub fn contains(self, point: Coord<T>) -> bool {
-        (0..4).into_iter().all(|i| self.bbox[i][0] <= point.components.0[i] && self.bbox[i][1] >= point.components.0[i])
+        (0..4).into_iter().all(|i| {
+            self.bbox[i][0] <= point.components.0[i] && self.bbox[i][1] >= point.components.0[i]
+        })
     }
 }

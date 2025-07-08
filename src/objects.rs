@@ -31,7 +31,9 @@ impl<T: Metric + ?Sized> RayIntersector<T> for SphereCollider<T> {
         let na = (0..3)
             .map(|i| sqr(local_ray.root.components.0[i + 1]))
             .sum::<f64>();
-        let nb = (0..3).map(|i| sqr(local_ray.components.0[i+1])).sum::<f64>();
+        let nb = (0..3)
+            .map(|i| sqr(local_ray.components.0[i + 1]))
+            .sum::<f64>();
         let r2 = sqr(self.radius);
 
         let d = sqr(ab) - na * nb + nb * r2;
@@ -45,8 +47,8 @@ impl<T: Metric + ?Sized> RayIntersector<T> for SphereCollider<T> {
         lower = lower.max((-ab - rootd) / sqr(nb));
         upper = upper.min((-ab + rootd) / sqr(nb));
 
-        let t1 = (local_ray.root.components.0[0] - self.time_thickness)/local_ray.components.0[0];
-        let t2 = (local_ray.root.components.0[0] + self.time_thickness)/local_ray.components.0[0];
+        let t1 = (local_ray.root.components.0[0] - self.time_thickness) / local_ray.components.0[0];
+        let t2 = (local_ray.root.components.0[0] + self.time_thickness) / local_ray.components.0[0];
 
         lower = lower.max(t1.min(t2));
         upper = upper.min(t1.max(t2));
