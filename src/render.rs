@@ -1,12 +1,16 @@
 use image::{Rgb, RgbImage};
 
-use crate::{camera::Camera, geometry::{BoundingBox, ManifoldFrame}, metric::{CarthesianMinkowski, Metric}, objects::RayIntersector};
+use crate::{camera::Camera, geometry::BoundingBox, metric::Metric, objects::RayIntersector};
 
-pub fn render_scene<T: Metric + ?Sized>(camera: impl Camera, camera_pos: ManifoldFrame<T>, objects: Vec<(Rgb<u8>, Box<dyn RayIntersector<T>>)>, bounds: BoundingBox<T>, step: f64) -> RgbImage {
+pub fn render_scene<T: Metric + ?Sized>(
+    camera: impl Camera<T>,
+    objects: Vec<(Rgb<u8>, Box<dyn RayIntersector<T>>)>,
+    bounds: BoundingBox<T>,
+    step: f64,
+) -> RgbImage {
     let (width, height) = camera.screen_size();
     RgbImage::from_fn(width as _, height as _, |x, y| {
-        let dir = camera.relative_dir((x as _, y as _));
-        let mut lightray = T::from_local(camera_pos, CarthesianMinkowski::lightray(dir));
+        let mut lightray = camera.ray((x as _, y as _));
         while bounds.contains(lightray.root) {
             lightray = T::step_geodesic(lightray, step);
 
@@ -16,6 +20,6 @@ pub fn render_scene<T: Metric + ?Sized>(camera: impl Camera, camera_pos: Manifol
                 }
             }
         }
-        Rgb([0,0,0])
+        Rgb([0, 0, 0])
     })
 }

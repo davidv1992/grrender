@@ -1,5 +1,5 @@
 use grrender::{
-    camera::BasicCamera,
+    camera::{BasicCamera, InstantCamera, ParallelRayCamera},
     geometry::{BoundingBox, Coord, FourVector, ManifoldFrame},
     metric::CarthesianMinkowski,
     objects::SphereCollider,
@@ -8,23 +8,27 @@ use grrender::{
 use image::Rgb;
 
 fn main() {
-    let beta = 0.9999;
+    let beta = 0.0;
     let gamma = 1.0 / (1.0f64 - beta * beta).sqrt();
 
     let image = render_scene::<CarthesianMinkowski>(
-        BasicCamera::new(400, 400, 1.0),
-        ManifoldFrame {
-            root: Coord {
-                components: FourVector([0.0; 4]),
-                _metric: std::marker::PhantomData,
+        ParallelRayCamera::new(
+            ManifoldFrame {
+                root: Coord {
+                    components: FourVector([0.0; 4]),
+                    _metric: std::marker::PhantomData,
+                },
+                axis: [
+                    FourVector([1.0, 0.0, 0.0, 0.0]),
+                    FourVector([0.0, 1.0, 0.0, 0.0]),
+                    FourVector([0.0, 0.0, 1.0, 0.0]),
+                    FourVector([0.0, 0.0, 0.0, 1.0]),
+                ],
             },
-            axis: [
-                FourVector([1.0, 0.0, 0.0, 0.0]),
-                FourVector([0.0, 1.0, 0.0, 0.0]),
-                FourVector([0.0, 0.0, 1.0, 0.0]),
-                FourVector([0.0, 0.0, 0.0, 1.0]),
-            ],
-        },
+            400,
+            400,
+            3.0,
+        ),
         vec![(
             Rgb([255, 255, 255]),
             Box::new(SphereCollider {
@@ -35,7 +39,7 @@ fn main() {
                     },
                     axis: [
                         FourVector([gamma, -beta * gamma, 0.0, 0.0]),
-                        FourVector([- beta * gamma, gamma, 0.0, 0.0]),
+                        FourVector([-beta * gamma, gamma, 0.0, 0.0]),
                         FourVector([0.0, 0.0, 1.0, 0.0]),
                         FourVector([0.0, 0.0, 0.0, 1.0]),
                     ],
